@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Building2,
   TrendingUp,
-  TrendingDown,
   Wallet,
   CheckCircle2,
   Clock,
@@ -10,9 +9,7 @@ import {
   FileText,
   Upload,
   PlusCircle,
-  RefreshCw,
   Search,
-  Filter,
   Download,
   Trash2,
   Edit3,
@@ -21,17 +18,11 @@ import {
   ArrowDownLeft,
   Layers,
   Database,
-  Users,
   ShieldCheck,
-  Eye,
-  DollarSign,
   ChevronRight,
-  Calendar,
   BarChart3,
   Check,
   X,
-  Menu,
-  FileSpreadsheet,
   Zap,
   Info,
 } from 'lucide-react';
@@ -43,12 +34,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 
 // Mock Currency Rates (Base: XOF)
@@ -169,7 +154,7 @@ const INITIAL_OPERATIONS = [
     nature: 'DEC',
     libelle: 'Paiement Loyer Siège Q1',
     montant: 6000000,
-    dateEmission: '2026-01-20', // > 30 days old!
+    dateEmission: '2026-01-20',
     datePrevisionnelle: '2026-02-01',
     tiers: 'Immobilière du Golfe',
     reference: 'CHQ-100234',
@@ -239,7 +224,7 @@ const INITIAL_OPERATIONS = [
     nature: 'DEC',
     libelle: 'Avance travaux Rénovation Agence',
     montant: 2500000,
-    dateEmission: '2026-02-01', // > 30 days old!
+    dateEmission: '2026-02-01',
     datePrevisionnelle: '2026-02-10',
     tiers: 'Entreprise BTP Moderne',
     reference: 'CHQ-100235',
@@ -257,7 +242,7 @@ const INITIAL_OPERATIONS = [
     datePrevisionnelle: '2026-03-08',
     tiers: 'Papeterie Centrale',
     reference: 'CHQ-889010',
-    statut: 'Encaissé', // Reconciled
+    statut: 'Encaissé',
     pieceJointe: '',
   },
   {
@@ -308,7 +293,7 @@ const INITIAL_STATEMENT_LINES = [
     id: 'st-4',
     bankId: 'bank-2',
     date: '2026-03-16',
-    libelle: 'VIR REC' + 'U SUPERGROS DISTRIB',
+    libelle: 'VIR RECU SUPERGROS DISTRIB',
     montant: 8750000,
     reference: 'REM-2026-012',
     adapte: false,
@@ -462,28 +447,23 @@ FOR EACH ROW EXECUTE FUNCTION update_solde_officiel_banque();
 `;
 
 export default function App() {
-  // State variables
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, banks, operations, reconciliation, statements, forecast, sql
-  const [userRole, setUserRole] = useState('DAF'); // DAF, Comptable, Lecture_Seule
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [userRole, setUserRole] = useState('DAF');
   const [displayCurrency, setDisplayCurrency] = useState('XOF');
   const [banks, setBanks] = useState(INITIAL_BANKS);
   const [operations, setOperations] = useState(INITIAL_OPERATIONS);
   const [statementLines, setStatementLines] = useState(INITIAL_STATEMENT_LINES);
 
-  // Search & Filter state for Operations
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBankFilter, setSelectedBankFilter] = useState('ALL');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
 
-  // Modals state
   const [isAddOpModalOpen, setIsAddOpModalOpen] = useState(false);
   const [isAddBankModalOpen, setIsAddBankModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [editingOp, setEditingOp] = useState(null);
-  const [editingBank, setEditingBank] = useState(null);
+  const [editingOp, setEditingOp] = useState<any>(null);
+  const [editingBank, setEditingBank] = useState<any>(null);
 
-  // New Operation Form state
   const [opForm, setOpForm] = useState({
     bankId: INITIAL_BANKS[0].id,
     type: 'Chèque émis',
@@ -498,7 +478,6 @@ export default function App() {
     pieceJointe: '',
   });
 
-  // New Bank Form state
   const [bankForm, setBankForm] = useState({
     nom: '',
     compte: '',
@@ -509,15 +488,11 @@ export default function App() {
     couleur: '#1e40af',
   });
 
-  // Reconcile interactive state
-  const [selectedStLineId, setSelectedStLineId] = useState(null);
-  const [selectedOpId, setSelectedOpId] = useState(null);
+  const [selectedStLineId, setSelectedStLineId] = useState<string | null>(null);
+  const [selectedOpId, setSelectedOpId] = useState<string | null>(null);
 
-  // Helper currency formatter
-  const formatCurrency = (amount, currency = displayCurrency) => {
+  const formatCurrency = (amount: number, currency = displayCurrency) => {
     let convertedAmount = amount;
-
-    // Simple conversion logic to current display currency
     if (currency !== displayCurrency) {
       if (currency === 'EUR' && displayCurrency === 'XOF')
         convertedAmount = amount * EXCHANGE_RATES.EUR;
@@ -538,7 +513,6 @@ export default function App() {
 
   const bankCalculations = useMemo(() => {
     return banks.map((bank) => {
-      // Filter pending operations for this specific bank
       const bankOps = operations.filter(
         (op) => op.bankId === bank.id && op.statut === 'En attente'
       );
@@ -551,7 +525,6 @@ export default function App() {
         .filter((op) => op.nature === 'DEC')
         .reduce((sum, op) => sum + Number(op.montant), 0);
 
-      // FORMULA: Solde Réel = Solde Banque (Dernier Relevé) + Opérations en attente d'encaissement - Opérations en attente de décaissement
       const soldeOfficiel = Number(bank.soldeOfficiel);
       const soldeReel =
         soldeOfficiel + pendingEncaissements - pendingDecaissements;
@@ -568,11 +541,9 @@ export default function App() {
     });
   }, [banks, operations]);
 
-  // Consolidated Totals
   const totals = useMemo(() => {
     return bankCalculations.reduce(
       (acc, b) => {
-        // Normalize to displayCurrency
         let rate = 1;
         if (b.devise === 'EUR' && displayCurrency === 'XOF')
           rate = EXCHANGE_RATES.EUR;
@@ -600,7 +571,6 @@ export default function App() {
     );
   }, [bankCalculations, displayCurrency]);
 
-  // Uncashed Cheques older than 30 days Alert Calculation
   const uncashedChequesAlerts = useMemo(() => {
     const today = new Date();
     return operations.filter((op) => {
@@ -608,26 +578,22 @@ export default function App() {
       if (!op.type.toLowerCase().includes('chèque')) return false;
 
       const dateEm = new Date(op.dateEmission);
-      const diffTime = Math.abs(today - dateEm);
+      const diffTime = Math.abs(today.getTime() - dateEm.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 30;
     });
   }, [operations]);
 
-  // Forecast Chart Data Generation (30/60/90 Days)
   const forecastChartData = useMemo(() => {
     const days = [];
     const baseSolde = totals.soldeReel;
-    let currentCalculatedSolde = baseSolde;
-
-    // Build timeline for next 60 days
     const today = new Date();
+
     for (let i = 0; i <= 60; i += 5) {
       const forecastDate = new Date(today);
       forecastDate.setDate(today.getDate() + i);
       const dateStr = forecastDate.toISOString().split('T')[0];
 
-      // Sum operations projected up to this date
       const opsToDate = operations.filter((op) => {
         if (op.statut !== 'En attente') return false;
         return op.datePrevisionnelle <= dateStr;
@@ -645,21 +611,21 @@ export default function App() {
           day: '2-digit',
           month: 'short',
         }),
-        SoldeReel: Math.round((baseSolde + enc - dec) / 1000000), // in Millions
+        SoldeReel: Math.round((baseSolde + enc - dec) / 1000000),
         SoldeOfficiel: Math.round(totals.soldeOfficiel / 1000000),
       });
     }
     return days;
   }, [totals, operations]);
 
-  const handleSaveOperation = (e) => {
+  const handleSaveOperation = (e: React.FormEvent) => {
     e.preventDefault();
     if (userRole === 'Lecture_Seule') return;
 
     if (editingOp) {
       setOperations(
         operations.map((op) =>
-          op.id === editingOp.id ? { ...opForm, id: op.id } : op
+          op.id === editingOp.id ? { ...opForm, id: op.id, montant: Number(opForm.montant) } : op
         )
       );
       setEditingOp(null);
@@ -675,14 +641,14 @@ export default function App() {
     resetOpForm();
   };
 
-  const handleSaveBank = (e) => {
+  const handleSaveBank = (e: React.FormEvent) => {
     e.preventDefault();
     if (userRole !== 'DAF') return;
 
     if (editingBank) {
       setBanks(
         banks.map((b) =>
-          b.id === editingBank.id ? { ...bankForm, id: b.id } : b
+          b.id === editingBank.id ? { ...bankForm, id: b.id, soldeInitial: Number(bankForm.soldeInitial), soldeOfficiel: Number(bankForm.soldeOfficiel), decouvertAutorise: Number(bankForm.decouvertAutorise) } : b
         )
       );
       setEditingBank(null);
@@ -701,7 +667,7 @@ export default function App() {
     resetBankForm();
   };
 
-  const handleDeleteOp = (id) => {
+  const handleDeleteOp = (id: string) => {
     if (userRole !== 'DAF') return;
     setOperations(operations.filter((op) => op.id !== id));
   };
@@ -734,16 +700,13 @@ export default function App() {
     });
   };
 
-  // Reconcile manual pairing action
-  const handleReconcilePair = (stLine, op) => {
+  const handleReconcilePair = (stLine: any, op: any) => {
     if (userRole === 'Lecture_Seule') return;
 
-    // Mark operation as reconciled/encaisse
     setOperations(
       operations.map((o) => (o.id === op.id ? { ...o, statut: 'Encaissé' } : o))
     );
 
-    // Mark statement line as matched
     setStatementLines(
       statementLines.map((s) =>
         s.id === stLine.id ? { ...s, adapte: true } : s
@@ -754,7 +717,6 @@ export default function App() {
     setSelectedOpId(null);
   };
 
-  // Auto Reconcile Matching Engine
   const handleAutoReconcile = () => {
     if (userRole === 'Lecture_Seule') return;
 
@@ -765,7 +727,6 @@ export default function App() {
     updatedStLines.forEach((st) => {
       if (st.adapte) return;
 
-      // Match criteria: Amount matches (absolute value) and Reference contains or matches
       const matchIndex = updatedOps.findIndex((op) => {
         if (op.statut !== 'En attente') return false;
         const amountMatch = Math.abs(op.montant) === Math.abs(st.montant);
@@ -791,10 +752,9 @@ export default function App() {
     );
   };
 
-  // Export report simulator
-  const handleExportReport = (type) => {
+  const handleExportReport = (type: string) => {
     alert(
-      `Génération du rapport de trésorerie DAF en format ${type.toUpperCase()} en cours... Le téléchargement va démarrer.`
+      `Génération du rapport de trésorerie DAF en format ${type.toUpperCase()} en cours...`
     );
   };
 
@@ -827,7 +787,6 @@ export default function App() {
       {/* HEADER BAR */}
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-30 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo & Application Title */}
           <div className="flex items-center space-x-3">
             <div className="bg-blue-600 p-2 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Building2 className="w-6 h-6 text-white" />
@@ -847,9 +806,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Controls: Devise Switcher & Role Simulator */}
           <div className="flex items-center space-x-4">
-            {/* Devise Picker */}
             <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1 text-xs">
               <span className="text-slate-400 px-2 font-medium hidden md:inline">
                 Devise affichage :
@@ -869,7 +826,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* Role Simulator Selector */}
             <div className="flex items-center space-x-2 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-1.5 text-xs">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span className="text-slate-300 font-medium hidden sm:inline">
@@ -899,7 +855,7 @@ export default function App() {
       </header>
 
       {/* NAVIGATION TABS BAR */}
-      <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-20 overflow-x-auto scrollbar-none">
+      <nav className="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-20 overflow-x-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 sm:space-x-4 py-2">
           {[
             { id: 'dashboard', label: 'Tableau de Bord DAF', icon: BarChart3 },
@@ -937,7 +893,7 @@ export default function App() {
                   }`}
                 />
                 <span>{tab.label}</span>
-                {tab.badge > 0 && (
+                {tab.badge !== undefined && tab.badge > 0 && (
                   <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-amber-200">
                     {tab.badge}
                   </span>
@@ -950,7 +906,7 @@ export default function App() {
 
       {/* MAIN CONTENT AREA */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
-        {/* TOP ALERT BANNER (Uncashed Cheques > 30 Days) */}
+        {/* TOP ALERT BANNER */}
         {uncashedChequesAlerts.length > 0 && (
           <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm flex items-start justify-between">
             <div className="flex items-start space-x-3">
@@ -988,9 +944,7 @@ export default function App() {
         {/* TAB 1: TABLEAU DE BORD DAF */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            {/* REAL BALANCE FORMULA EXPLANATION BANNER */}
             <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-              <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center space-x-2 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-1">
@@ -1032,10 +986,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* EXECUTIVE KPI CARDS */}
+            {/* KPI CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* 1. SOLDE RELEVE OFFICIEL */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -1049,14 +1002,9 @@ export default function App() {
                     <Building2 className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Derniers relevés importés</span>
-                  <span className="font-medium text-slate-700">Comptable</span>
-                </div>
               </div>
 
-              {/* 2. ENCAISSEMENTS EN ATTENTE */}
-              <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm relative overflow-hidden">
+              <div className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
@@ -1070,14 +1018,9 @@ export default function App() {
                     <ArrowDownLeft className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Chèques & vir. annoncés</span>
-                  <span className="font-bold text-emerald-600">ENTRÉES</span>
-                </div>
               </div>
 
-              {/* 3. DÉCAISSEMENTS EN ATTENTE */}
-              <div className="bg-white rounded-2xl p-5 border border-rose-100 shadow-sm relative overflow-hidden">
+              <div className="bg-white rounded-2xl p-5 border border-rose-100 shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
@@ -1091,14 +1034,9 @@ export default function App() {
                     <ArrowUpRight className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <span>Chèques émis & effets</span>
-                  <span className="font-bold text-rose-600">SORTIES</span>
-                </div>
               </div>
 
-              {/* 4. SOLDE RÉEL CONSOLIDÉ */}
-              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-md relative overflow-hidden">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-md">
                 <div className="flex justify-between items-start">
                   <div>
                     <span className="text-xs font-bold text-blue-200 uppercase tracking-wider">
@@ -1112,16 +1050,10 @@ export default function App() {
                     <Wallet className="w-5 h-5" />
                   </div>
                 </div>
-                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs text-blue-100">
-                  <span>Avec découverts :</span>
-                  <span className="font-black text-white">
-                    {formatCurrency(totals.soldeDisponible)}
-                  </span>
-                </div>
               </div>
             </div>
 
-            {/* BANQUE CARDS OVERVIEW */}
+            {/* BANQUE CARDS */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
@@ -1138,267 +1070,132 @@ export default function App() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {bankCalculations.map((bank) => {
-                  const percentUsedOfOverdraft =
-                    bank.decouvertAutorise > 0
-                      ? Math.min(
-                          100,
-                          Math.max(
-                            0,
-                            (bank.soldeReel /
-                              (bank.soldeOfficiel + bank.decouvertAutorise)) *
-                              100
-                          )
-                        )
-                      : 100;
-
-                  return (
-                    <div
-                      key={bank.id}
-                      className="border border-slate-200 rounded-xl p-4 hover:border-blue-400 transition bg-slate-50/50 flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-bold text-slate-900 text-sm">
-                            {bank.nom}
-                          </span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
-                            {bank.devise}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 font-mono mb-3 truncate">
-                          {bank.compte}
-                        </p>
-
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex justify-between text-slate-500">
-                            <span>Solde Relevé :</span>
-                            <span className="font-medium text-slate-800">
-                              {formatCurrency(bank.soldeOfficiel, bank.devise)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-emerald-600">
-                            <span>+ À encaissem. :</span>
-                            <span className="font-medium">
-                              +
-                              {formatCurrency(
-                                bank.pendingEncaissements,
-                                bank.devise
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-rose-600">
-                            <span>- À décaissem. :</span>
-                            <span className="font-medium">
-                              -
-                              {formatCurrency(
-                                bank.pendingDecaissements,
-                                bank.devise
-                              )}
-                            </span>
-                          </div>
-                        </div>
+                {bankCalculations.map((bank) => (
+                  <div
+                    key={bank.id}
+                    className="border border-slate-200 rounded-xl p-4 hover:border-blue-400 transition bg-slate-50/50 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-slate-900 text-sm">
+                          {bank.nom}
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                          {bank.devise}
+                        </span>
                       </div>
+                      <p className="text-[11px] text-slate-500 font-mono mb-3 truncate">
+                        {bank.compte}
+                      </p>
 
-                      <div className="mt-4 pt-3 border-t border-slate-200">
-                        <div className="flex justify-between items-baseline mb-1">
-                          <span className="text-[11px] font-bold text-slate-500 uppercase">
-                            Solde Réel
-                          </span>
-                          <span className="text-base font-black text-blue-900">
-                            {formatCurrency(bank.soldeReel, bank.devise)}
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex justify-between text-slate-500">
+                          <span>Solde Relevé :</span>
+                          <span className="font-medium text-slate-800">
+                            {formatCurrency(bank.soldeOfficiel, bank.devise)}
                           </span>
                         </div>
-
-                        {/* Overdraft progress bar */}
-                        <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
-                          <div
-                            className="bg-blue-600 h-full rounded-full"
-                            style={{ width: `${percentUsedOfOverdraft}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                          <span>Découvert autor.</span>
-                          <span>
+                        <div className="flex justify-between text-emerald-600">
+                          <span>+ À encaissem. :</span>
+                          <span className="font-medium">
+                            +
                             {formatCurrency(
-                              bank.decouvertAutorise,
+                              bank.pendingEncaissements,
+                              bank.devise
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-rose-600">
+                          <span>- À décaissem. :</span>
+                          <span className="font-medium">
+                            -
+                            {formatCurrency(
+                              bank.pendingDecaissements,
                               bank.devise
                             )}
                           </span>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <div className="mt-4 pt-3 border-t border-slate-200">
+                      <div className="flex justify-between items-baseline mb-1">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase">
+                          Solde Réel
+                        </span>
+                        <span className="text-base font-black text-blue-900">
+                          {formatCurrency(bank.soldeReel, bank.devise)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* CHART & RECENT OPERATIONS SPLIT */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* CHART: EVOLUTION & FORECAST */}
-              <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 flex items-center space-x-2">
-                      <BarChart3 className="w-5 h-5 text-blue-600" />
-                      <span>
-                        Évolution & Prévisionnel du Solde Réel (en Millions)
-                      </span>
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Projection basée sur les opérations en attente
-                    </p>
-                  </div>
-                </div>
-
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={forecastChartData}
-                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="colorReel"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#2563eb"
-                            stopOpacity={0.4}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#2563eb"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#f1f5f9"
-                      />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                      />
-                      <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#0f172a',
-                          borderRadius: '12px',
-                          color: '#fff',
-                          fontSize: '12px',
-                        }}
-                        formatter={(val) => [
-                          `${val} M ${displayCurrency}`,
-                          'Solde',
-                        ]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="SoldeReel"
-                        stroke="#2563eb"
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorReel)"
-                        name="Solde Réel Prévu"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* QUICK RECENT PENDING TRANSACTIONS */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-base font-bold text-slate-900">
-                      Dernières Opérations Saisies
-                    </h3>
-                    <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
-                      En attente
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {operations
-                      .filter((o) => o.statut === 'En attente')
-                      .slice(0, 5)
-                      .map((op) => {
-                        const bank = banks.find((b) => b.id === op.bankId);
-                        return (
-                          <div
-                            key={op.id}
-                            className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 text-xs"
-                          >
-                            <div className="flex items-center space-x-2.5 min-w-0">
-                              <div
-                                className={`p-2 rounded-lg flex-shrink-0 ${
-                                  op.nature === 'ENC'
-                                    ? 'bg-emerald-100 text-emerald-700'
-                                    : 'bg-rose-100 text-rose-700'
-                                }`}
-                              >
-                                {op.nature === 'ENC' ? (
-                                  <ArrowDownLeft className="w-4 h-4" />
-                                ) : (
-                                  <ArrowUpRight className="w-4 h-4" />
-                                )}
-                              </div>
-                              <div className="truncate">
-                                <p className="font-bold text-slate-900 truncate">
-                                  {op.libelle}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
-                                  {op.tiers} • {bank?.nom}
-                                </p>
-                              </div>
-                            </div>
-                            <span
-                              className={`font-black whitespace-nowrap ml-2 ${
-                                op.nature === 'ENC'
-                                  ? 'text-emerald-600'
-                                  : 'text-rose-600'
-                              }`}
-                            >
-                              {op.nature === 'ENC' ? '+' : '-'}
-                              {formatCurrency(op.montant, bank?.devise)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setActiveTab('operations')}
-                  className="w-full mt-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl text-center"
-                >
-                  Voir toutes les opérations ({operations.length})
-                </button>
+            {/* CHART AREA */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <span>Évolution & Prévisionnel du Solde Réel (en Millions)</span>
+              </h3>
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={forecastChartData}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="colorReel"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#2563eb"
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#2563eb"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#f1f5f9"
+                    />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="SoldeReel"
+                      stroke="#2563eb"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorReel)"
+                      name="Solde Réel Prévu"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: GESTION DES BANQUES */}
+        {/* TAB 2: BANQUES */}
         {activeTab === 'banks' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Gestion des Comptes & Banques
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Paramétrez les comptes bancaires, devises et découverts
-                  autorisés
-                </p>
-              </div>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900">
+                Gestion des Comptes & Banques
+              </h2>
               <button
                 onClick={() => {
                   setIsAddBankModalOpen(true);
@@ -1406,7 +1203,7 @@ export default function App() {
                   resetBankForm();
                 }}
                 disabled={userRole !== 'DAF'}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 disabled:opacity-50 self-start"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 disabled:opacity-50"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>Ajouter une banque (DAF)</span>
@@ -1433,18 +1230,24 @@ export default function App() {
                         </p>
                       </div>
                       {userRole === 'DAF' && (
-                        <div className="flex items-center space-x-1">
-                          <button
-                            onClick={() => {
-                              setEditingBank(bank);
-                              setBankForm(bank);
-                              setIsAddBankModalOpen(true);
-                            }}
-                            className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg text-xs"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => {
+                            setEditingBank(bank);
+                            setBankForm({
+                              nom: bank.nom,
+                              compte: bank.compte,
+                              devise: bank.devise,
+                              soldeInitial: String(bank.soldeInitial),
+                              soldeOfficiel: String(bank.soldeOfficiel),
+                              decouvertAutorise: String(bank.decouvertAutorise),
+                              couleur: bank.couleur,
+                            });
+                            setIsAddBankModalOpen(true);
+                          }}
+                          className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg text-xs"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
 
@@ -1456,9 +1259,6 @@ export default function App() {
                         <p className="text-base font-extrabold text-slate-800">
                           {formatCurrency(bank.soldeOfficiel, bank.devise)}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          au {bank.dateDernierReleve}
-                        </p>
                       </div>
                       <div>
                         <span className="text-[11px] text-blue-600 uppercase font-bold">
@@ -1467,49 +1267,8 @@ export default function App() {
                         <p className="text-base font-black text-blue-900">
                           {formatCurrency(bank.soldeReel, bank.devise)}
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          {bank.pendingCount} op. en attente
-                        </p>
                       </div>
                     </div>
-
-                    <div className="mt-4 space-y-2 text-xs">
-                      <div className="flex justify-between text-slate-600">
-                        <span>Encaissements en attente :</span>
-                        <span className="font-bold text-emerald-600">
-                          +
-                          {formatCurrency(
-                            bank.pendingEncaissements,
-                            bank.devise
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>Décaissements en attente :</span>
-                        <span className="font-bold text-rose-600">
-                          -
-                          {formatCurrency(
-                            bank.pendingDecaissements,
-                            bank.devise
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-slate-600 pt-1 border-t border-slate-100">
-                        <span>Découvert Autorisé :</span>
-                        <span className="font-semibold text-slate-800">
-                          {formatCurrency(bank.decouvertAutorise, bank.devise)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span className="text-slate-500">
-                      Capacité disponible totale :
-                    </span>
-                    <span className="font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg">
-                      {formatCurrency(bank.soldeDisponible, bank.devise)}
-                    </span>
                   </div>
                 </div>
               ))}
@@ -1517,19 +1276,13 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: OPÉRATIONS INTERNES (CŒUR DU LOGICIEL) */}
+        {/* TAB 3: OPÉRATIONS */}
         {activeTab === 'operations' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Saisie des Opérations Internes
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Enregistrez chèques émis, virements, effets et recettes non
-                  encore sur le relevé
-                </p>
-              </div>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900">
+                Saisie des Opérations Internes
+              </h2>
               <button
                 onClick={() => {
                   setIsAddOpModalOpen(true);
@@ -1537,229 +1290,70 @@ export default function App() {
                   resetOpForm();
                 }}
                 disabled={userRole === 'Lecture_Seule'}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm disabled:opacity-50 self-start"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 disabled:opacity-50"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span>Saisir une nouvelle opération</span>
               </button>
             </div>
 
-            {/* FILTERS TOOLBAR */}
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Search Box */}
-                <div className="relative">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    placeholder="Chercher libellé, tiers, réf..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Bank Filter */}
-                <select
-                  value={selectedBankFilter}
-                  onChange={(e) => setSelectedBankFilter(e.target.value)}
-                  className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  <option value="ALL">Toutes les banques</option>
-                  {banks.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.nom}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Status Filter */}
-                <select
-                  value={selectedStatusFilter}
-                  onChange={(e) => setSelectedStatusFilter(e.target.value)}
-                  className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  <option value="ALL">Tous les statuts</option>
-                  <option value="En attente">En attente (Non rapproché)</option>
-                  <option value="Encaissé">Encaissé / Rapproché</option>
-                  <option value="Rejeté">Rejeté</option>
-                  <option value="Annulé">Annulé</option>
-                </select>
-
-                {/* Type Filter */}
-                <select
-                  value={selectedTypeFilter}
-                  onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                  className="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
-                >
-                  <option value="ALL">Tous les types d'opération</option>
-                  <option value="Chèque émis">Chèque émis</option>
-                  <option value="Virement émis">Virement émis</option>
-                  <option value="Effet à payer">Effet à payer</option>
-                  <option value="Chèque reçu">Chèque reçu</option>
-                  <option value="Remise de chèque">Remise de chèque</option>
-                  <option value="Virement reçu annoncé">
-                    Virement reçu annoncé
-                  </option>
-                  <option value="Frais bancaires prévisionnels">
-                    Frais bancaires prévisionnels
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            {/* OPERATIONS TABLE */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                       <th className="p-3.5">Statut</th>
-                      <th className="p-3.5">Dates (Émis. / Prév.)</th>
-                      <th className="p-3.5">Banque</th>
+                      <th className="p-3.5">Dates</th>
                       <th className="p-3.5">Type & Libellé</th>
-                      <th className="p-3.5">Tiers / Bénéficiaire</th>
-                      <th className="p-3.5">Référence</th>
+                      <th className="p-3.5">Tiers</th>
                       <th className="p-3.5 text-right">Montant</th>
-                      <th className="p-3.5 text-center">Pièce</th>
                       <th className="p-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
-                    {filteredOperations.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan="9"
-                          className="p-8 text-center text-slate-400"
-                        >
-                          Aucune opération ne correspond aux critères de
-                          recherche.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredOperations.map((op) => {
-                        const bank = banks.find((b) => b.id === op.bankId);
-                        const isPending = op.statut === 'En attente';
-
-                        return (
-                          <tr
-                            key={op.id}
-                            className="hover:bg-slate-50 transition"
-                          >
-                            {/* Statut Badge */}
-                            <td className="p-3.5">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                                  op.statut === 'En attente'
-                                    ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                    : op.statut === 'Encaissé'
-                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                    : 'bg-slate-100 text-slate-600'
-                                }`}
+                    {filteredOperations.map((op) => {
+                      const bank = banks.find((b) => b.id === op.bankId);
+                      return (
+                        <tr key={op.id} className="hover:bg-slate-50 transition">
+                          <td className="p-3.5">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
+                              {op.statut}
+                            </span>
+                          </td>
+                          <td className="p-3.5 text-slate-600">{op.dateEmission}</td>
+                          <td className="p-3.5 font-semibold text-slate-900">{op.libelle}</td>
+                          <td className="p-3.5 text-slate-700">{op.tiers}</td>
+                          <td className={`p-3.5 text-right font-black ${op.nature === 'ENC' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {op.nature === 'ENC' ? '+' : '-'}{formatCurrency(op.montant, bank?.devise)}
+                          </td>
+                          <td className="p-3.5 text-right whitespace-nowrap space-x-1">
+                            {userRole !== 'Lecture_Seule' && (
+                              <button
+                                onClick={() => {
+                                  setEditingOp(op);
+                                  setOpForm({
+                                    ...op,
+                                    montant: String(op.montant)
+                                  });
+                                  setIsAddOpModalOpen(true);
+                                }}
+                                className="p-1.5 text-slate-500 hover:text-blue-600"
                               >
-                                {op.statut === 'En attente' && (
-                                  <Clock className="w-3 h-3 mr-1" />
-                                )}
-                                {op.statut === 'Encaissé' && (
-                                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                                )}
-                                {op.statut}
-                              </span>
-                            </td>
-
-                            {/* Dates */}
-                            <td className="p-3.5 text-slate-600 whitespace-nowrap">
-                              <div className="font-semibold text-slate-800">
-                                {op.dateEmission}
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                Prév: {op.datePrevisionnelle}
-                              </div>
-                            </td>
-
-                            {/* Banque */}
-                            <td className="p-3.5 font-bold text-slate-800 whitespace-nowrap">
-                              {bank?.nom}
-                            </td>
-
-                            {/* Type & Libelle */}
-                            <td className="p-3.5 max-w-xs">
-                              <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                {op.type}
-                              </span>
-                              <p className="font-semibold text-slate-900 mt-0.5 truncate">
-                                {op.libelle}
-                              </p>
-                            </td>
-
-                            {/* Tiers */}
-                            <td className="p-3.5 text-slate-700 font-medium">
-                              {op.tiers}
-                            </td>
-
-                            {/* Reference */}
-                            <td className="p-3.5 font-mono text-slate-500 text-[11px]">
-                              {op.reference || '-'}
-                            </td>
-
-                            {/* Montant */}
-                            <td
-                              className={`p-3.5 text-right font-black whitespace-nowrap text-sm ${
-                                op.nature === 'ENC'
-                                  ? 'text-emerald-600'
-                                  : 'text-rose-600'
-                              }`}
-                            >
-                              {op.nature === 'ENC' ? '+' : '-'}
-                              {formatCurrency(op.montant, bank?.devise)}
-                            </td>
-
-                            {/* Pièce Jointe */}
-                            <td className="p-3.5 text-center">
-                              {op.pieceJointe ? (
-                                <span
-                                  className="inline-flex items-center text-[10px] text-blue-600 font-bold bg-blue-50 p-1 rounded hover:underline cursor-pointer"
-                                  title={op.pieceJointe}
-                                >
-                                  <FileText className="w-3.5 h-3.5 mr-0.5" />
-                                  PDF
-                                </span>
-                              ) : (
-                                <span className="text-slate-300 text-[10px]">
-                                  -
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Actions */}
-                            <td className="p-3.5 text-right whitespace-nowrap space-x-1">
-                              {userRole !== 'Lecture_Seule' && (
-                                <button
-                                  onClick={() => {
-                                    setEditingOp(op);
-                                    setOpForm(op);
-                                    setIsAddOpModalOpen(true);
-                                  }}
-                                  className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg"
-                                  title="Modifier"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                              )}
-                              {userRole === 'DAF' && (
-                                <button
-                                  onClick={() => handleDeleteOp(op.id)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                                  title="Supprimer (DAF)"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                            )}
+                            {userRole === 'DAF' && (
+                              <button
+                                onClick={() => handleDeleteOp(op.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1767,109 +1361,56 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: RAPPROCHEMENT BANCAIRE INTELLIGENT */}
+        {/* TAB 4: RAPPROCHEMENT */}
         {activeTab === 'reconciliation' && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Rapprochement Bancaire Intelligent
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Associez le relevé bancaire officiel avec les opérations
-                  enregistrées en attente
-                </p>
-              </div>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900">
+                Rapprochement Bancaire Intelligent
+              </h2>
               <button
                 onClick={handleAutoReconcile}
                 disabled={userRole === 'Lecture_Seule'}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm disabled:opacity-50 self-start"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2"
               >
                 <Zap className="w-4 h-4 text-amber-300" />
-                <span>Rapprochement Automatique Intelligent</span>
+                <span>Rapprochement Automatique</span>
               </button>
             </div>
 
-            {/* SPLIT SCREEN VIEW */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LEFT SIDE: IMPORTED STATEMENT LINES */}
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">
-                      Lignes Relevé Bancaire Importé
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      Aperçu officiel de la banque
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-                    {statementLines.filter((s) => !s.adapte).length} non
-                    rapprochées
-                  </span>
-                </div>
-
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                <h3 className="font-bold text-slate-900 text-base">Lignes Relevé Bancaire</h3>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {statementLines.map((st) => (
                     <div
                       key={st.id}
                       onClick={() => !st.adapte && setSelectedStLineId(st.id)}
                       className={`p-3 rounded-xl border transition cursor-pointer ${
                         st.adapte
-                          ? 'bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed'
+                          ? 'bg-slate-50 opacity-50 cursor-not-allowed'
                           : selectedStLineId === st.id
                           ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200'
-                          : 'bg-white border-slate-200 hover:border-blue-300'
+                          : 'bg-white hover:border-blue-300'
                       }`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-xs font-bold text-slate-800">
-                            {st.libelle}
-                          </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            {st.date} • Réf: {st.reference}
-                          </p>
+                          <p className="text-xs font-bold text-slate-800">{st.libelle}</p>
+                          <p className="text-[10px] text-slate-400">{st.date}</p>
                         </div>
-                        <span
-                          className={`text-sm font-black ${
-                            st.montant > 0
-                              ? 'text-emerald-600'
-                              : 'text-rose-600'
-                          }`}
-                        >
-                          {st.montant > 0 ? '+' : ''}
+                        <span className={`text-sm font-black ${st.montant > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {formatCurrency(st.montant)}
                         </span>
                       </div>
-                      {st.adapte && (
-                        <span className="mt-2 inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
-                          <Check className="w-3 h-3 mr-1" /> Rapproché
-                        </span>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* RIGHT SIDE: INTERNAL PENDING OPERATIONS */}
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-                <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-base">
-                      Opérations Internes En Attente
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      Enregistrées dans le logiciel
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
-                    {operations.filter((o) => o.statut === 'En attente').length}{' '}
-                    en attente
-                  </span>
-                </div>
-
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                <h3 className="font-bold text-slate-900 text-base">Opérations Internes En Attente</h3>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
                   {operations
                     .filter((o) => o.statut === 'En attente')
                     .map((op) => (
@@ -1879,29 +1420,15 @@ export default function App() {
                         className={`p-3 rounded-xl border transition cursor-pointer ${
                           selectedOpId === op.id
                             ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200'
-                            : 'bg-white border-slate-200 hover:border-blue-300'
+                            : 'bg-white hover:border-blue-300'
                         }`}
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                              {op.type}
-                            </span>
-                            <p className="text-xs font-bold text-slate-800 mt-1">
-                              {op.libelle}
-                            </p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              {op.tiers} • {op.reference}
-                            </p>
+                            <p className="text-xs font-bold text-slate-800">{op.libelle}</p>
+                            <p className="text-[10px] text-slate-400">{op.tiers}</p>
                           </div>
-                          <span
-                            className={`text-sm font-black ${
-                              op.nature === 'ENC'
-                                ? 'text-emerald-600'
-                                : 'text-rose-600'
-                            }`}
-                          >
-                            {op.nature === 'ENC' ? '+' : '-'}
+                          <span className={`text-sm font-black ${op.nature === 'ENC' ? 'text-emerald-600' : 'text-rose-600'}`}>
                             {formatCurrency(op.montant)}
                           </span>
                         </div>
@@ -1911,295 +1438,94 @@ export default function App() {
               </div>
             </div>
 
-            {/* ACTION BAR WHEN BOTH ARE SELECTED */}
             {selectedStLineId && selectedOpId && (
-              <div className="bg-slate-900 text-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                <div className="flex items-center space-x-3 text-xs">
-                  <CheckSquare className="w-5 h-5 text-emerald-400" />
-                  <span>
-                    1 Ligne de relevé et 1 Opération en attente sélectionnées.
-                  </span>
-                </div>
+              <div className="bg-slate-900 text-white rounded-2xl p-4 flex justify-between items-center">
+                <span>1 ligne de relevé et 1 opération sélectionnées.</span>
                 <button
                   onClick={() => {
-                    const st = statementLines.find(
-                      (s) => s.id === selectedStLineId
-                    );
+                    const st = statementLines.find((s) => s.id === selectedStLineId);
                     const op = operations.find((o) => o.id === selectedOpId);
                     if (st && op) handleReconcilePair(st, op);
                   }}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-6 py-2.5 rounded-xl text-xs transition shadow-lg"
+                  className="bg-emerald-500 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs"
                 >
-                  Valider le Rapprochement Manuel
+                  Valider le Rapprochement
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* TAB 5: RELEVÉS BANCAIRES & IMPORT */}
+        {/* TAB 5: STATEMENTS */}
         {activeTab === 'statements' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Relevés Bancaires & Solde Officiel
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Importez les fichiers relevés (CSV, Excel) ou ajustez le solde
-                  à date qui fait foi
-                </p>
-              </div>
-              <button
-                onClick={() => setIsImportModalOpen(true)}
-                disabled={userRole === 'Lecture_Seule'}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm disabled:opacity-50 self-start"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Importer un Relevé (CSV / Excel)</span>
-              </button>
-            </div>
-
-            {/* IMPORT LOG & HISTORY */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* HISTORIQUE RELEVES */}
-              <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-slate-900 text-base">
-                  Historique des Relevés Valider
-                </h3>
-
-                <div className="space-y-3">
-                  {banks.map((bank) => (
-                    <div
-                      key={bank.id}
-                      className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2.5 bg-blue-100 text-blue-700 rounded-xl font-bold">
-                          PDF / CSV
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-slate-900">
-                            {bank.nom}
-                          </p>
-                          <p className="text-slate-400 text-[10px]">
-                            Relevé officiel du {bank.dateDernierReleve}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block uppercase">
-                          Solde Déclaré
-                        </span>
-                        <span className="font-black text-slate-900 text-sm">
-                          {formatCurrency(bank.soldeOfficiel, bank.devise)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* NOTICE BOX */}
-              <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md flex flex-col justify-between">
-                <div>
-                  <div className="p-3 bg-blue-600/30 rounded-xl w-fit mb-3">
-                    <Info className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <h4 className="font-bold text-base text-white">
-                    Le Relevé Fait Foi
-                  </h4>
-                  <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                    Dans la gestion de trésorerie DAF, le solde officiel issu du
-                    relevé est la base inamovible. Toutes les opérations
-                    internes saisies (chèques en attente, virements prévus)
-                    viennent s'ajouter ou se retrancher de cette base.
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400">
-                  Support formats : CSV, MT940, Excel, PDF bancaires standard.
-                </div>
-              </div>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h2 className="text-xl font-bold text-slate-900">Importation & Relevés Bancaires</h2>
+            <p className="text-xs text-slate-500">
+              Dans la gestion de trésorerie DAF, le solde officiel issu du relevé bancaire fait foi.
+            </p>
           </div>
         )}
 
-        {/* TAB 6: PRÉVISIONNEL DE TRÉSORERIE 30/60/90 JOURS */}
+        {/* TAB 6: FORECAST */}
         {activeTab === 'forecast' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-black text-slate-900">
-                Prévisionnel de Trésorerie à 30 / 60 / 90 Jours
-              </h2>
-              <p className="text-xs text-slate-500">
-                Anticipez les impasses de trésorerie en observant les échéances
-                d'encaissement et décaissement
-              </p>
-            </div>
-
-            {/* FORECAST PERIOD CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                { title: 'Échéances à 30 Jours', days: 30, color: 'blue' },
-                { title: 'Échéances à 60 Jours', days: 60, color: 'indigo' },
-                { title: 'Échéances à 90 Jours', days: 90, color: 'violet' },
-              ].map((period, idx) => {
-                const targetDate = new Date();
-                targetDate.setDate(targetDate.getDate() + period.days);
-                const targetStr = targetDate.toISOString().split('T')[0];
-
-                const pendingOps = operations.filter(
-                  (o) =>
-                    o.statut === 'En attente' &&
-                    o.datePrevisionnelle <= targetStr
-                );
-                const enc = pendingOps
-                  .filter((o) => o.nature === 'ENC')
-                  .reduce((s, o) => s + Number(o.montant), 0);
-                const dec = pendingOps
-                  .filter((o) => o.nature === 'DEC')
-                  .reduce((s, o) => s + Number(o.montant), 0);
-                const projSolde = totals.soldeReel + enc - dec;
-
-                return (
-                  <div
-                    key={idx}
-                    className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4"
-                  >
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-slate-900 text-sm">
-                        {period.title}
-                      </h3>
-                      <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                        Jusqu'au {targetDate.toLocaleDateString('fr-FR')}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between text-slate-500">
-                        <span>Solde Réel Actuel :</span>
-                        <span className="font-semibold text-slate-800">
-                          {formatCurrency(totals.soldeReel)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-emerald-600">
-                        <span>+ Entrées prévues :</span>
-                        <span className="font-bold">
-                          +{formatCurrency(enc)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-rose-600">
-                        <span>- Sorties prévues :</span>
-                        <span className="font-bold">
-                          -{formatCurrency(dec)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-100 flex justify-between items-baseline">
-                      <span className="text-xs font-bold text-slate-500 uppercase">
-                        Solde Prévu
-                      </span>
-                      <span className="text-lg font-black text-blue-900">
-                        {formatCurrency(projSolde)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* FULL FORECAST CHART */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-bold text-slate-900 text-base mb-4">
-                Courbe de Trésorerie Projetée
-              </h3>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={forecastChartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#f1f5f9"
-                    />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="SoldeReel"
-                      stroke="#4f46e5"
-                      fill="#e0e7ff"
-                      name="Trésorerie Projetée (M XOF)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h2 className="text-xl font-bold text-slate-900">Prévisionnel 30 / 60 / 90 Jours</h2>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={forecastChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="SoldeReel" stroke="#2563eb" fill="#93c5fd" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}
 
-        {/* TAB 7: SUPABASE SQL SCHEMA */}
+        {/* TAB 7: SUPABASE SQL */}
         {activeTab === 'sql' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Schéma SQL Supabase & Tables
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Script SQL complet incluant enums, tables, vues du Solde Réel
-                  et triggers
-                </p>
-              </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-black text-slate-900">Schéma SQL Supabase</h2>
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(SUPABASE_SQL_SCRIPT);
-                  alert('Script SQL Supabase copié dans le presse-papier !');
+                  alert('Code SQL copié !');
                 }}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition flex items-center space-x-2"
+                className="bg-slate-900 text-white text-xs px-4 py-2 rounded-xl"
               >
-                <Database className="w-4 h-4 text-blue-400" />
-                <span>Copier le Code SQL</span>
+                Copier le SQL
               </button>
             </div>
-
-            <div className="bg-slate-900 rounded-2xl p-6 text-slate-200 shadow-xl overflow-x-auto font-mono text-xs leading-relaxed border border-slate-800">
+            <div className="bg-slate-900 text-slate-200 p-6 rounded-2xl font-mono text-xs overflow-x-auto">
               <pre>{SUPABASE_SQL_SCRIPT}</pre>
             </div>
           </div>
         )}
       </main>
 
-      {/* MODAL: SAISIE OPÉRATION INTERNE */}
+      {/* MODAL: SAISIE OPÉRATION */}
       {isAddOpModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <h3 className="font-black text-lg text-slate-900">
-                {editingOp
-                  ? "Modifier l'Opération"
-                  : 'Saisir une nouvelle opération en attente'}
+                {editingOp ? "Modifier l'Opération" : 'Nouvelle Opération Internes'}
               </h3>
-              <button
-                onClick={() => setIsAddOpModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsAddOpModalOpen(false)}>
+                <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
 
             <form onSubmit={handleSaveOperation} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Compte Bancaire
-                </label>
+                <label className="font-bold text-slate-700 block mb-1">Compte Bancaire</label>
                 <select
                   value={opForm.bankId}
-                  onChange={(e) =>
-                    setOpForm({ ...opForm, bankId: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setOpForm({ ...opForm, bankId: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   required
                 >
                   {banks.map((b) => (
@@ -2210,306 +1536,51 @@ export default function App() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Type d'opération
-                  </label>
-                  <select
-                    value={opForm.type}
-                    onChange={(e) => {
-                      const selectedType = e.target.value;
-                      const isEnc = [
-                        'Chèque reçu',
-                        'Remise de chèque',
-                        'Virement reçu annoncé',
-                      ].includes(selectedType);
-                      setOpForm({
-                        ...opForm,
-                        type: selectedType,
-                        nature: isEnc ? 'ENC' : 'DEC',
-                      });
-                    }}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Chèque émis">
-                      Chèque émis (Décaissement)
-                    </option>
-                    <option value="Virement émis">
-                      Virement émis (Décaissement)
-                    </option>
-                    <option value="Effet à payer">
-                      Effet à payer (Décaissement)
-                    </option>
-                    <option value="Chèque reçu">
-                      Chèque reçu (Encaissement)
-                    </option>
-                    <option value="Remise de chèque">
-                      Remise de chèque (Encaissement)
-                    </option>
-                    <option value="Virement reçu annoncé">
-                      Virement reçu annoncé (Encaissement)
-                    </option>
-                    <option value="Frais bancaires prévisionnels">
-                      Frais bancaires prévisionnels
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Impact Trésorerie
-                  </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={
-                      opForm.nature === 'ENC'
-                        ? '+ ENCAISSEMENT (Entrée)'
-                        : '- DÉCAISSEMENT (Sortie)'
-                    }
-                    className={`w-full p-2.5 rounded-xl font-black text-[11px] ${
-                      opForm.nature === 'ENC'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-rose-100 text-rose-800'
-                    }`}
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Libellé / Motif
-                </label>
+                <label className="font-bold text-slate-700 block mb-1">Libellé / Motif</label>
                 <input
                   type="text"
-                  placeholder="ex: Règlement Facture F-2026-99"
                   value={opForm.libelle}
-                  onChange={(e) =>
-                    setOpForm({ ...opForm, libelle: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                  onChange={(e) => setOpForm({ ...opForm, libelle: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Tiers / Émetteur / Bénéficiaire
-                  </label>
+                  <label className="font-bold text-slate-700 block mb-1">Tiers</label>
                   <input
                     type="text"
-                    placeholder="ex: Client SOTUBO"
                     value={opForm.tiers}
-                    onChange={(e) =>
-                      setOpForm({ ...opForm, tiers: e.target.value })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
+                    onChange={(e) => setOpForm({ ...opForm, tiers: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                     required
                   />
                 </div>
-
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Montant
-                  </label>
+                  <label className="font-bold text-slate-700 block mb-1">Montant</label>
                   <input
                     type="number"
-                    placeholder="0.00"
                     value={opForm.montant}
-                    onChange={(e) =>
-                      setOpForm({ ...opForm, montant: e.target.value })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                    onChange={(e) => setOpForm({ ...opForm, montant: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Date d'émission
-                  </label>
-                  <input
-                    type="date"
-                    value={opForm.dateEmission}
-                    onChange={(e) =>
-                      setOpForm({ ...opForm, dateEmission: e.target.value })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Date prévisionnelle en banque
-                  </label>
-                  <input
-                    type="date"
-                    value={opForm.datePrevisionnelle}
-                    onChange={(e) =>
-                      setOpForm({
-                        ...opForm,
-                        datePrevisionnelle: e.target.value,
-                      })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Numéro de Chèque / Référence Virement
-                </label>
-                <input
-                  type="text"
-                  placeholder="ex: CHQ-998811"
-                  value={opForm.reference}
-                  onChange={(e) =>
-                    setOpForm({ ...opForm, reference: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end space-x-2">
+              <div className="flex justify-end space-x-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddOpModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50"
+                  className="px-4 py-2 border border-slate-200 rounded-xl font-bold"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md"
-                >
-                  Enregistrer l'opération
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: AJOUT BANQUE (DAF ONLY) */}
-      {isAddBankModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-              <h3 className="font-black text-lg text-slate-900">
-                {editingBank ? 'Modifier la Banque' : 'Ajouter une banque'}
-              </h3>
-              <button
-                onClick={() => setIsAddBankModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBank} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Nom de la Banque
-                </label>
-                <input
-                  type="text"
-                  placeholder="ex: Orabank Togo"
-                  value={bankForm.nom}
-                  onChange={(e) =>
-                    setBankForm({ ...bankForm, nom: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Numéro de compte (RIB/IBAN)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ex: TG012 01001..."
-                  value={bankForm.compte}
-                  onChange={(e) =>
-                    setBankForm({ ...bankForm, compte: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Devise du compte
-                  </label>
-                  <select
-                    value={bankForm.devise}
-                    onChange={(e) =>
-                      setBankForm({ ...bankForm, devise: e.target.value })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  >
-                    <option value="XOF">XOF (FCFA)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Découvert Autorisé
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={bankForm.decouvertAutorise}
-                    onChange={(e) =>
-                      setBankForm({
-                        ...bankForm,
-                        decouvertAutorise: e.target.value,
-                      })
-                    }
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Solde Officiel Initial / Relevé
-                </label>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={bankForm.soldeOfficiel}
-                  onChange={(e) =>
-                    setBankForm({ ...bankForm, soldeOfficiel: e.target.value })
-                  }
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-sm"
-                  required
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAddBankModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold"
                 >
                   Enregistrer
                 </button>
@@ -2519,91 +1590,83 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL: IMPORT RELEVÉ FILE SIMULATION */}
-      {isImportModalOpen && (
+      {/* MODAL: SAISIE BANQUE */}
+      {isAddBankModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
               <h3 className="font-black text-lg text-slate-900">
-                Importer un relevé bancaire
+                {editingBank ? 'Modifier la Banque' : 'Ajouter une Banque'}
               </h3>
-              <button
-                onClick={() => setIsImportModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsAddBankModalOpen(false)}>
+                <X className="w-5 h-5 text-slate-400" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
+            <form onSubmit={handleSaveBank} className="space-y-4 text-xs">
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Sélectionner la Banque
-                </label>
-                <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium">
-                  {banks.map((b) => (
-                    <option key={b.id}>{b.nom}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Upload Dropzone */}
-              <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-blue-500 transition cursor-pointer bg-slate-50">
-                <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <p className="font-bold text-slate-700">
-                  Glissez votre fichier ici (CSV, Excel, MT940)
-                </p>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Taille maximale : 10 Mo
-                </p>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Solde de fin de période du relevé
-                </label>
+                <label className="font-bold text-slate-700 block mb-1">Nom de la Banque</label>
                 <input
-                  type="number"
-                  placeholder="ex: 48500000"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                  type="text"
+                  value={bankForm.nom}
+                  onChange={(e) => setBankForm({ ...bankForm, nom: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  required
                 />
               </div>
 
-              <div className="pt-3 flex justify-end space-x-2">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Numéro de Compte (RIB/IBAN)</label>
+                <input
+                  type="text"
+                  value={bankForm.compte}
+                  onChange={(e) => setBankForm({ ...bankForm, compte: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Solde Officiel Relevé</label>
+                  <input
+                    type="number"
+                    value={bankForm.soldeOfficiel}
+                    onChange={(e) => setBankForm({ ...bankForm, soldeOfficiel: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Découvert Autorisé</label>
+                  <input
+                    type="number"
+                    value={bankForm.decouvertAutorise}
+                    onChange={(e) => setBankForm({ ...bankForm, decouvertAutorise: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
                 <button
                   type="button"
-                  onClick={() => setIsImportModalOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl font-bold"
+                  onClick={() => setIsAddBankModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 rounded-xl font-bold"
                 >
                   Annuler
                 </button>
                 <button
-                  type="button"
-                  onClick={() => {
-                    alert(
-                      'Relevé bancaire analysé et importé avec succès ! Le solde officiel est mis à jour.'
-                    );
-                    setIsImportModalOpen(false);
-                  }}
-                  className="px-5 py-2 bg-blue-600 text-white rounded-xl font-bold shadow-md"
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold"
                 >
-                  Lancer l'importation
+                  Enregistrer
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
-
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 border-t border-slate-800 text-xs py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center sm:flex sm:justify-between sm:text-left">
-          <p>© 2026 TRÉSO HQ — Solution de Trésorerie DAF Multi-Banques</p>
-          <p className="mt-1 sm:mt-0 text-slate-500">
-            Moteur Solde Réel v2.4 • Supabase Ready
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
